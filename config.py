@@ -5,7 +5,7 @@ CONFIG_FILE = os.path.expanduser("~/Library/Application Support/folder-cleaner/c
 os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
 
 DEFAULTS = {
-    "WATCH_PATH": "~/Downloads",
+    "WATCH_PATHS": ["~/Downloads"],
     "MAX_SIZE_MB": 5000,
     "MAX_AMOUNT_FILES": 20,
     "MAX_INTERACTIVE_FILES": 10,

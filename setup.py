@@ -1,5 +1,6 @@
 from setuptools import setup
 
+
 APP = ['settings_gui.py']
 OPTIONS = {
     'argv_emulation': True,
