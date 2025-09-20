@@ -1,15 +1,15 @@
 import json
 import os
 
-CONFIG_FILE = os.path.expanduser("~/Library/Application Support/folder-cleaner/config.json")
+CONFIG_FILE = os.path.expanduser("~/Library/Application Support/folder-checker/config.json")
 os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
 
 DEFAULTS = {
     "WATCH_PATHS": ["~/Downloads"],
     "MAX_SIZE_MB": 5000,
-    "MAX_AMOUNT_FILES": 20,
-    "MAX_INTERACTIVE_FILES": 10,
-    "CHECK_INTERVAL_SEC": 300,
+    "MAX_AMOUNT_ITEMS": 20,
+    "MAX_INTERACTIVE_FILES": 100,
+    "CHECK_INTERVAL_SEC": 86400,
 }
 
 def load_config():
