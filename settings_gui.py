@@ -118,6 +118,11 @@ class SettingsWindow:
         self.remove_path_button.setAction_("removePath:")
         content.addSubview_(self.remove_path_button)
 
+        # Disable remove button if only one path
+        if len(self.watch_paths_data) <= 1:
+            self.remove_path_button.setEnabled_(False)
+
+
         y -= 60
         # --- Max Size ---
         self.size_label = NSTextField.alloc().initWithFrame_(((20, y), (130, 24)))
@@ -254,9 +259,15 @@ class SettingsWindow:
             new_paths = [str(url.path()) for url in panel.URLs()]
             self.paths_data_source.addPaths_(new_paths)
             self.paths_table.reloadData()
+            self.remove_path_button.setEnabled_(True)
 
     def removePath_(self, sender):
+        if len(self.paths_data_source.paths) <= 1:
+            logger.warning("Cannot remove last watch path")
+            return
         self.paths_data_source.removeSelectedRows_(self.paths_table)
+        if len(self.paths_data_source.paths) <= 1:
+            self.remove_path_button.setEnabled_(False)
 
 
     # --- Run Checker Now ---

@@ -73,6 +73,8 @@ class AppDelegate(NSObject):
         # ) 
         # menu.addItem_(quit_item)
 
+        settings.open_settings_window()
+
 
     # --- Checker background loop ---
     def start_checker_loop(self):
