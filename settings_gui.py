@@ -72,10 +72,11 @@ class SettingsWindow:
 
         # --- Icon ---
         bundle = NSBundle.mainBundle()
-        icon_path = bundle.pathForResource_ofType_("icon_sweeper", "png")
+        icon_path = bundle.pathForResource_ofType_("sweeper", "icns")
         if icon_path:
             img = NSImage.alloc().initWithContentsOfFile_(icon_path)
             img.setSize_((64, 64))
+            img.setTemplate_(True)
             image_view = NSImageView.alloc().initWithFrame_(((128, y -50), (64, 64)))
             image_view.setImage_(img)
             content.addSubview_(image_view)
@@ -262,7 +263,7 @@ class SettingsWindow:
     def runCheckerNow_(self, sender):
         logger.info("Manual 'Check now' clicked")
         try:
-            checker.run_checker()
+            checker.run_checker(interactive=True)
             self.show_temporary_label("✓ Check")
         except Exception as e:
             logger.error(f"Error during manual check: {e}")

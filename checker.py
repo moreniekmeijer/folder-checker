@@ -48,7 +48,7 @@ def move_to_trash(path):
 
 def delete_files_interactive(path, max_items=10):
     bundle = NSBundle.mainBundle()
-    icon_path = bundle.pathForResource_ofType_("icon_sweeper", "icns")
+    icon_path = bundle.pathForResource_ofType_("sweeper", "icns")
 
     items = get_top_level_items(path)
     items.sort(key=os.path.getmtime, reverse=True)
@@ -80,7 +80,7 @@ def delete_files_interactive(path, max_items=10):
             logger.debug(f"{item_path} kept.")
 
 
-def run_checker():
+def run_checker(interactive=False):
     cfg = config.load_config()
     watch_paths = cfg.get("WATCH_PATHS", [])
     max_size_mb = cfg["MAX_SIZE_MB"]
@@ -88,8 +88,20 @@ def run_checker():
     max_interactive_files = cfg["MAX_INTERACTIVE_FILES"]
 
     bundle = NSBundle.mainBundle()
-    icon_disabled_path = bundle.pathForResource_ofType_("icon_disabled", "icns")
+    icon_disabled_path = bundle.pathForResource_ofType_("sweeper_disabled", "icns")
+    icon_enabled_path = bundle.pathForResource_ofType_("sweeper_enabled", "icns")
 
+    if not watch_paths:
+        logger.warning("No folders selected")
+        
+        msg = "No folders selected.\n\nPlease add at least one folder in the settings."
+        if icon_disabled_path:
+            script = f'display dialog "{msg}" with icon POSIX file "{icon_disabled_path}" buttons {{"OK"}} default button "OK"'
+        else:
+            script = f'display dialog "{msg}" buttons {{"OK"}} default button "OK"'
+        subprocess.run(["osascript", "-e", script])
+        return
+    
     for path in watch_paths:
         expanded_path = os.path.expanduser(path)
 
@@ -117,7 +129,14 @@ def run_checker():
             else:
                 logger.info(f"{expanded_path} is within limits")
                 summary = f"It contains {top_level_items} items ({size_mb:.2f} MB)."
-                send_notification(f"{expanded_path} is within limits", summary)
+                if interactive:
+                    if icon_enabled_path:
+                        script = f'display dialog "{expanded_path} is within limits.\n\n{summary}" with icon POSIX file "{icon_enabled_path}" buttons {{"OK"}} default button "OK"'
+                    else:
+                        script = f'display dialog "{expanded_path} is within limits.\n\n{summary}" buttons {{"OK"}} default button "OK"'
+                    subprocess.run(["osascript", "-e", script])
+                else:
+                    send_notification(expanded_path, f"Folder is within limits.\n{summary}")
         else:
             logger.error(f"Cannot find folder: {expanded_path}")
 

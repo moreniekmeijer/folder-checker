@@ -3,9 +3,12 @@ from setuptools import setup
 APP = ['menubar_app.py']
 OPTIONS = {
     'argv_emulation': False,
-    'iconfile': 'resources/icon.icns',
+    'iconfile': 'resources/sweeper.icns',
     'packages': ['objc', 'Foundation', 'AppKit', 'CoreFoundation'],
-    'resources': ['checker.py', 'config.py', 'settings_cocoa.py', 'logger_setup.py', 'resources/icon_disabled.icns', 'resources/icon_sweeper.png'],
+    'resources': ['checker.py', 'config.py', 'settings_cocoa.py', 'logger_setup.py', 
+                  'resources/disabled.icns', 'resources/enabled.icns', 
+                  'resources/sweeper_disabled.icns', 'resources/sweeper_enabled.icns',
+                  'resources/sweeper_dark.icns'],
     'plist': {
         'CFBundleName': 'FolderChecker',
         'CFBundleDisplayName': 'FolderChecker',
