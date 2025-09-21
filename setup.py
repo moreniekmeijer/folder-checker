@@ -1,14 +1,18 @@
 from setuptools import setup
 
 APP = ['menubar_app.py']
+DATA_FILES = [
+    'resources/disabled.icns',
+    'resources/enabled.icns',
+    'resources/sweeper_disabled.icns',
+    'resources/sweeper_enabled.icns',
+    'resources/sweeper_dark.icns',
+]
 OPTIONS = {
     'argv_emulation': False,
     'iconfile': 'resources/sweeper.icns',
-    'packages': ['objc', 'Foundation', 'AppKit', 'CoreFoundation'],
-    'resources': ['checker.py', 'config.py', 'settings_cocoa.py', 'logger_setup.py', 
-                  'resources/disabled.icns', 'resources/enabled.icns', 
-                  'resources/sweeper_disabled.icns', 'resources/sweeper_enabled.icns',
-                  'resources/sweeper_dark.icns'],
+    'packages': ['Cocoa', 'objc', 'Foundation', 'AppKit', 'CoreFoundation'],
+    'resources': DATA_FILES,
     'plist': {
         'CFBundleName': 'FolderChecker',
         'CFBundleDisplayName': 'FolderChecker',
@@ -22,5 +26,6 @@ OPTIONS = {
 setup(
     app=APP,
     options={'py2app': OPTIONS},
-    setup_requires=['py2app', 'pyobjc'],
+    install_requires=['pyobjc'],
+    py_modules=['checker', 'config', 'settings_cocoa', 'logger_setup'],
 )

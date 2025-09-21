@@ -1,0 +1,5 @@
+py2app==0.28.8
+pyobjc==11.1
+pyobjc-core==11.1
+pyobjc-framework-Cocoa==11.1
+pyobjc-framework-UserNotifications==11.1
