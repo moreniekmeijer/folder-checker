@@ -8,8 +8,13 @@ from notifications import send_notification
 
 logger.info("Checker started")
 
-FIRST_RUN = True
-EXCLUDED_PATTERNS = {".DS_Store", ".localized", ".Spotlight-V100", ".fseventsd", ".Trash"}
+EXCLUDED_PATTERNS = {
+    ".DS_Store",
+    ".localized",
+    ".Spotlight-V100",
+    ".fseventsd",
+    ".Trash",
+}
 
 
 def get_top_level_items(path):
@@ -54,7 +59,6 @@ def delete_files_interactive(path, max_items=10):
     items.sort(key=os.path.getmtime, reverse=True)
 
     skip_all = False
-    """Return a list of top-level items (files + folders) in path, excluding system files."""
     for item_path in items[:max_items]:
         if skip_all:
             logger.debug(f"{item_path} skipped (Skip All).")
@@ -81,13 +85,13 @@ def delete_files_interactive(path, max_items=10):
 
 
 def run_checker(interactive=False):
-    global FIRST_RUN
-
-    if FIRST_RUN:
-        FIRST_RUN = False
-        return
-    
     cfg = config.load_config()
+
+    # Skip checker the very first run (bij installatie)
+    if not cfg.get("FIRST_RUN_DONE", False):
+        logger.info("Skipping checker because FIRST_RUN_DONE is not set")
+        return
+
     watch_paths = cfg.get("WATCH_PATHS", [])
     max_size_mb = cfg["MAX_SIZE_MB"]
     max_amount_items = cfg["MAX_AMOUNT_ITEMS"]
@@ -99,7 +103,7 @@ def run_checker(interactive=False):
 
     if not watch_paths:
         logger.warning("No folders selected")
-        
+
         msg = "No folders selected.\n\nPlease add at least one folder in the settings."
         if icon_disabled_path:
             script = f'display dialog "{msg}" with icon POSIX file "{icon_disabled_path}" buttons {{"OK"}} default button "OK"'
@@ -107,7 +111,7 @@ def run_checker(interactive=False):
             script = f'display dialog "{msg}" buttons {{"OK"}} default button "OK"'
         subprocess.run(["osascript", "-e", script])
         return
-    
+
     for path in watch_paths:
         expanded_path = os.path.expanduser(path)
 
