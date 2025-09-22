@@ -13,6 +13,15 @@ if [ ! -d "$APP_BUNDLE" ]; then
   exit 1
 fi
 
-(cd "$DIST_DIR" && zip -r "$APP_NAME.zip" "$APP_NAME.app")
+TMP_DIR=$(mktemp -d)
+cp -R "$APP_BUNDLE" "$TMP_DIR/"
+cp README.md README_nl.md LICENSE "$TMP_DIR/" || true
+
+(
+  cd "$TMP_DIR"
+  zip -r "$ZIP_FILE" ./*
+)
+
+rm -rf "$TMP_DIR"
 
 echo "Done! Zip available at: $ZIP_FILE"
