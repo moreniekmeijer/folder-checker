@@ -27,5 +27,5 @@ setup(
     app=APP,
     options={'py2app': OPTIONS},
     install_requires=['pyobjc'],
-    py_modules=['checker', 'config', 'settings_cocoa', 'logger_setup'],
+    py_modules=['checker', 'config', 'settings_gui', 'logger_setup'],
 )

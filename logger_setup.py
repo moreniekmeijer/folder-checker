@@ -1,10 +1,12 @@
 import logging
-import os
+from pathlib import Path
 
-LOGFILE = os.path.expanduser("~/folderchecker.log")
+LOG_DIR = Path.home() / "Library/Logs/FolderChecker"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOGFILE = LOG_DIR / "folderchecker.log"
 
 logging.basicConfig(
-    filename=LOGFILE,
+    filename=str(LOGFILE),
     level=logging.DEBUG,
     format="%(asctime)s %(levelname)s: %(message)s"
 )

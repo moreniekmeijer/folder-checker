@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+import subprocess
 from Foundation import NSObject
 from AppKit import NSApplication, NSStatusBar, NSMenu, NSMenuItem, NSImage, NSBundle
 import checker
@@ -8,9 +11,40 @@ import settings_gui as settings
 import uninstall
 
 
+def add_to_login_items(app_path):
+    """Voegt de .app toe aan macOS Login Items, zodat deze automatisch start bij login."""
+    if not os.path.exists(app_path):
+        logger.warning(f"App path does not exist: {app_path}")
+        return
+
+    # Gebruik alleen de .app-naam, niet het hele pad als 'login item name'
+    app_name = os.path.basename(app_path)
+
+    script = f'''
+    tell application "System Events"
+        if not (exists login item "{app_name}") then
+            make login item at end with properties {{path:"{app_path}", hidden:false}}
+        end if
+    end tell
+    '''
+    try:
+        subprocess.run(['osascript', '-e', script], check=True)
+        logger.info(f"Added to Login Items: {app_path}")
+    except subprocess.CalledProcessError as e:
+        logger.warning(f"Could not add to Login Items: {e}")
+
+
 class AppDelegate(NSObject):
     def applicationDidFinishLaunching_(self, notification):
         logger.info("Application launched")
+        cfg = config.load_config()
+
+        if not cfg.get("FIRST_RUN_DONE", False):
+            try:
+                APP_PATH = NSBundle.mainBundle().bundlePath()
+                add_to_login_items(APP_PATH)
+            except Exception as e:
+                logger.warning(f"Could not add to Login Items: {e}")
 
         # --- Build menubar ---
         statusbar = NSStatusBar.systemStatusBar()
@@ -73,7 +107,11 @@ class AppDelegate(NSObject):
         # ) 
         # menu.addItem_(quit_item)
 
-        settings.open_settings_window()
+        if not cfg.get("FIRST_RUN_DONE", False):
+            logger.info("First run detected, opening settings window")
+            settings.open_settings_window()
+            cfg["FIRST_RUN_DONE"] = True
+            config.save_config(cfg)
 
 
     # --- Checker background loop ---

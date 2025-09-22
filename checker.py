@@ -8,7 +8,7 @@ from notifications import send_notification
 
 logger.info("Checker started")
 
-
+FIRST_RUN = True
 EXCLUDED_PATTERNS = {".DS_Store", ".localized", ".Spotlight-V100", ".fseventsd", ".Trash"}
 
 
@@ -81,6 +81,12 @@ def delete_files_interactive(path, max_items=10):
 
 
 def run_checker(interactive=False):
+    global FIRST_RUN
+
+    if FIRST_RUN:
+        FIRST_RUN = False
+        return
+    
     cfg = config.load_config()
     watch_paths = cfg.get("WATCH_PATHS", [])
     max_size_mb = cfg["MAX_SIZE_MB"]

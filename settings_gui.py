@@ -12,6 +12,7 @@ from logger_setup import logger
 
 logger.info("Starting Cocoa settings GUI")
 
+
 INTERVAL_OPTIONS = {
     "Every 5 minutes": 300,
     "Every hour": 3600,
@@ -53,6 +54,7 @@ class WatchPathsTable(NSObject):
 class SettingsWindow:
     def __init__(self):
         self.cfg = config.load_config()
+        logger.info("Config file loaded")
 
         # --- Window ---
         self.window = NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(

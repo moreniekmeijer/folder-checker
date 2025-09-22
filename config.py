@@ -1,15 +1,16 @@
 import json
 import os
 
-CONFIG_FILE = os.path.expanduser("~/Library/Application Support/folder-checker/config.json")
+CONFIG_FILE = os.path.expanduser("~/Library/Application Support/FolderChecker/config.json")
 os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
 
 DEFAULTS = {
-    "WATCH_PATHS": ["~/Downloads"],
+    "WATCH_PATHS": ["~/Downloads", "~/Desktop"],
     "MAX_SIZE_MB": 2000,
     "MAX_AMOUNT_ITEMS": 20,
-    "MAX_INTERACTIVE_FILES": 100,
+    "MAX_INTERACTIVE_FILES": 1000,
     "CHECK_INTERVAL_SEC": 86400,
+    "FIRST_RUN_DONE": False
 }
 
 def load_config():
