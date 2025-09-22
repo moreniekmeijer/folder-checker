@@ -243,6 +243,7 @@ class SettingsWindow:
         config.save_config(new_cfg)
         self.show_temporary_label("✓ Saved")
 
+
     # --- Field change actions ---
     def fieldChanged_(self, notification):
         self.save_live_settings()

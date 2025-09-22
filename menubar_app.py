@@ -1,25 +1,28 @@
 import os
-from pathlib import Path
 import subprocess
+import threading
 from Foundation import NSObject
-from AppKit import NSApplication, NSStatusBar, NSMenu, NSMenuItem, NSImage, NSBundle
+from AppKit import (
+    NSApplication,
+    NSStatusBar,
+    NSMenu,
+    NSMenuItem,
+    NSImage,
+    NSBundle,
+)
 import checker
 import config
-import threading
 from logger_setup import logger
 import settings_gui as settings
 import uninstall
 
 
 def add_to_login_items(app_path):
-    """Voegt de .app toe aan macOS Login Items, zodat deze automatisch start bij login."""
     if not os.path.exists(app_path):
         logger.warning(f"App path does not exist: {app_path}")
         return
 
-    # Gebruik alleen de .app-naam, niet het hele pad als 'login item name'
     app_name = os.path.basename(app_path)
-
     script = f'''
     tell application "System Events"
         if not (exists login item "{app_name}") then
@@ -46,66 +49,12 @@ class AppDelegate(NSObject):
             except Exception as e:
                 logger.warning(f"Could not add to Login Items: {e}")
 
-        # --- Build menubar ---
-        statusbar = NSStatusBar.systemStatusBar()
-        self.statusitem = statusbar.statusItemWithLength_(-1)
-
-        bundle = NSBundle.mainBundle()
-        self.sweeper_enabled_path = bundle.pathForResource_ofType_("sweeper_enabled", "icns")
-        self.sweeper_disabled_path = bundle.pathForResource_ofType_("sweeper_disabled", "icns")
-        self.sweeper_enabled = NSImage.alloc().initWithContentsOfFile_(self.sweeper_enabled_path)
-        self.sweeper_disabled = NSImage.alloc().initWithContentsOfFile_(self.sweeper_disabled_path)
-        self.icon_enabled_path = bundle.pathForResource_ofType_("enabled", "icns")
-        self.icon_disabled_path = bundle.pathForResource_ofType_("disabled", "icns")
-        self.icon_enabled = NSImage.alloc().initWithContentsOfFile_(self.icon_enabled_path)
-        self.icon_disabled = NSImage.alloc().initWithContentsOfFile_(self.icon_disabled_path)
-
-        for img in (self.sweeper_enabled, self.sweeper_disabled, self.icon_enabled, self.icon_disabled):
-            if img:
-                img.setSize_((18, 18))
-                img.setTemplate_(True)
-
-        # Default: enabled icon
-        self.statusitem.button().setImage_(self.sweeper_enabled)
-        self.statusitem.button().setTitle_("")
-
-        # --- Build menu ---
-        menu = NSMenu()
-
-        self.toggle_checker_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-            "Disable checker", "toggleChecker:", ""
-        )
-        self.toggle_checker_item.setImage_(self.icon_enabled)
-        menu.addItem_(self.toggle_checker_item)
-
-        self.statusitem.setMenu_(menu)
+        self._build_status_item()
+        self._build_menu()
 
         self.checker_enabled = True
         self.checker_timer = None
         self.start_checker_loop()
-
-        menu.addItem_(NSMenuItem.separatorItem())
-
-        item1 = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-            "Check now", "checkNow:", ""
-        )
-        menu.addItem_(item1)
-
-        item2 = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-            "Open settings", "openSettings:", ""
-        )
-        menu.addItem_(item2)
-
-        uninstall_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
-            "Uninstall…", "uninstallApp:", ""
-        )
-        uninstall_item.setTarget_(self)
-        menu.addItem_(uninstall_item)
-
-        # quit_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_( 
-        #     "Quit", "terminate:", "" 
-        # ) 
-        # menu.addItem_(quit_item)
 
         if not cfg.get("FIRST_RUN_DONE", False):
             logger.info("First run detected, opening settings window")
@@ -113,8 +62,74 @@ class AppDelegate(NSObject):
             cfg["FIRST_RUN_DONE"] = True
             config.save_config(cfg)
 
+    # -----------------------
+    # UI helpers
+    # -----------------------
+    def _build_status_item(self):
+        statusbar = NSStatusBar.systemStatusBar()
+        self.statusitem = statusbar.statusItemWithLength_(-1)
 
-    # --- Checker background loop ---
+        bundle = NSBundle.mainBundle()
+
+        self.sweeper_enabled = NSImage.alloc().initWithContentsOfFile_(
+            bundle.pathForResource_ofType_("sweeper_enabled", "icns")
+        )
+        self.sweeper_disabled = NSImage.alloc().initWithContentsOfFile_(
+            bundle.pathForResource_ofType_("sweeper_disabled", "icns")
+        )
+        self.icon_enabled = NSImage.alloc().initWithContentsOfFile_(
+            bundle.pathForResource_ofType_("enabled", "icns")
+        )
+        self.icon_disabled = NSImage.alloc().initWithContentsOfFile_(
+            bundle.pathForResource_ofType_("disabled", "icns")
+        )
+
+        for img in (self.sweeper_enabled, self.sweeper_disabled, self.icon_enabled, self.icon_disabled):
+            if img:
+                img.setSize_((18, 18))
+                img.setTemplate_(True)
+
+        self.statusitem.button().setImage_(self.sweeper_enabled)
+        self.statusitem.button().setTitle_("")
+
+    def _build_menu(self):
+        menu = NSMenu()
+
+        # toggle checker
+        self.toggle_checker_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+            "Disable checker", "toggleChecker:", ""
+        )
+        self.toggle_checker_item.setImage_(self.icon_enabled)
+        menu.addItem_(self.toggle_checker_item)
+
+        menu.addItem_(NSMenuItem.separatorItem())
+
+        # check now
+        item1 = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+            "Check now", "checkNow:", ""
+        )
+        menu.addItem_(item1)
+
+        menu.addItem_(NSMenuItem.separatorItem())
+
+        # open settings
+        item2 = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+            "Open settings", "openSettings:", ""
+        )
+        menu.addItem_(item2)
+
+        # uninstall
+        uninstall_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
+            "Uninstall…", "uninstallApp:", ""
+        )
+        uninstall_item.setTarget_(self)
+        menu.addItem_(uninstall_item)
+
+        self.statusitem.setMenu_(menu)
+
+    # -----------------------
+    # Checker loop
+    # -----------------------
     def start_checker_loop(self):
         def run_periodically():
             if not self.checker_enabled:
@@ -130,7 +145,6 @@ class AppDelegate(NSObject):
             except Exception as e:
                 logger.error(f"Error during periodical check: {e}")
 
-            # Restart timer
             self.checker_timer = threading.Timer(interval, run_periodically)
             self.checker_timer.daemon = True
             self.checker_timer.start()
@@ -143,13 +157,10 @@ class AppDelegate(NSObject):
             self.checker_timer = None
             logger.info("Background checker stopped")
 
-    # --- Menu actions ---
+    # -----------------------
+    # Menu actions
+    # -----------------------
     def checkNow_(self, sender):
-        """Uncomment to disable 'Check now' when checker is disabled."""
-        # if not self.checker_enabled:
-        #     logger.info("Check now clicked, but checker is disabled")
-        #     return
-
         logger.info("Manual 'Check now' clicked")
         try:
             checker.run_checker()
