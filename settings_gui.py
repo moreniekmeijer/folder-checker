@@ -12,6 +12,13 @@ from logger_setup import logger
 
 logger.info("Starting Cocoa settings GUI")
 
+_settings_window_instance = None
+
+class SettingsWindowDelegate(NSObject):
+    def windowWillClose_(self, notification):
+        global _settings_window_instance
+        _settings_window_instance = None
+
 
 INTERVAL_OPTIONS = {
     "Every 5 minutes": 300,
@@ -231,16 +238,19 @@ class SettingsWindow:
             except ValueError:
                 return default
 
-        new_cfg = {
+        cfg = config.load_config()
+
+        cfg.update({
             "WATCH_PATHS": self.paths_data_source.paths,
-            "MAX_SIZE_MB": safe_int(self.size_field, self.cfg.get("MAX_SIZE_MB", 500)),
-            "MAX_AMOUNT_ITEMS": safe_int(self.files_field, self.cfg.get("MAX_AMOUNT_ITEMS", 10)),
-            "MAX_INTERACTIVE_FILES": 100,  # fixed value since field is disabled
+            "MAX_SIZE_MB": safe_int(self.size_field, cfg.get("MAX_SIZE_MB", 500)),
+            "MAX_AMOUNT_ITEMS": safe_int(self.files_field, cfg.get("MAX_AMOUNT_ITEMS", 10)),
+            "MAX_INTERACTIVE_FILES": 100,  # fixed value for now
             "CHECK_INTERVAL_SEC": INTERVAL_OPTIONS.get(
                 self.interval_dropdown.titleOfSelectedItem(), 86400
             )
-        }
-        config.save_config(new_cfg)
+        })
+
+        config.save_config(cfg)
         self.show_temporary_label("✓ Saved")
 
 
@@ -284,4 +294,11 @@ class SettingsWindow:
 
 
 def open_settings_window():
-    SettingsWindow()
+    global _settings_window_instance
+    if _settings_window_instance is None:
+        _settings_window_instance = SettingsWindow()
+        _settings_window_instance.delegate = SettingsWindowDelegate.alloc().init()
+        _settings_window_instance.window.setDelegate_(_settings_window_instance.delegate)
+    else:
+        # breng bestaande window naar voren
+        _settings_window_instance.window.makeKeyAndOrderFront_(None)

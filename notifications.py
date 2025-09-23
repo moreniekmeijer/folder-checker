@@ -23,14 +23,23 @@ _delegate = FCNotificationDelegate.alloc().init()
 
 def setup_notifications():
     """
-    Installeer de delegate en vraag toestemming voor notificaties
+    Installeer de delegate en vraag toestemming voor notificaties.
+    Geeft True terug als toestemming verleend is, anders False.
     """
     center = UNUserNotificationCenter.currentNotificationCenter()
     center.setDelegate_(_delegate)
+
+    result = {"granted": False}
+
+    def completion(granted, error):
+        from Foundation import NSLog
+        NSLog("Granted: %s" % granted)
+        result["granted"] = granted
+
     options = (1 << 0) | (1 << 2)  # alert + sound
-    center.requestAuthorizationWithOptions_completionHandler_(
-        options, lambda granted, error: NSLog("Granted: %s" % granted)
-    )
+    center.requestAuthorizationWithOptions_completionHandler_(options, completion)
+
+    return result
 
 def send_notification(title, message, delay=0):
     """

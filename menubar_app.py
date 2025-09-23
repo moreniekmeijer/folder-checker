@@ -14,6 +14,7 @@ import checker
 import config
 from logger_setup import logger
 import settings_gui as settings
+from notifications import setup_notifications
 import uninstall
 
 
@@ -40,6 +41,15 @@ def add_to_login_items(app_path):
 class AppDelegate(NSObject):
     def applicationDidFinishLaunching_(self, notification):
         logger.info("Application launched")
+
+        # --- Setup notificaties ---
+        notif_result = setup_notifications()
+        if not notif_result["granted"]:
+            logger.warning("User did not grant notification permissions")
+            # Optioneel: fallback popup
+            script = 'display dialog "FolderChecker cannot show notifications. Please enable notifications in System Settings > Notifications." buttons {"OK"} default button "OK"'
+            subprocess.run(["osascript", "-e", script])
+
         cfg = config.load_config()
 
         if not cfg.get("FIRST_RUN_DONE", False):

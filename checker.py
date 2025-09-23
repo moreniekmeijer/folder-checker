@@ -87,7 +87,6 @@ def delete_files_interactive(path, max_items=10):
 def run_checker(interactive=False):
     cfg = config.load_config()
 
-    # Skip checker the very first run (bij installatie)
     if not cfg.get("FIRST_RUN_DONE", False):
         logger.info("Skipping checker because FIRST_RUN_DONE is not set")
         return
