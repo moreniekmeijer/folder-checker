@@ -13,7 +13,7 @@ from AppKit import (
 import checker
 import config
 from logger_setup import logger
-import settings_gui as settings
+import settings_window as settings
 from notifications import setup_notifications
 import uninstall
 
@@ -43,12 +43,15 @@ class AppDelegate(NSObject):
         logger.info("Application launched")
 
         # --- Setup notificaties ---
-        notif_result = setup_notifications()
-        if not notif_result["granted"]:
-            logger.warning("User did not grant notification permissions")
-            # Optioneel: fallback popup
-            script = 'display dialog "FolderChecker cannot show notifications. Please enable notifications in System Settings > Notifications." buttons {"OK"} default button "OK"'
-            subprocess.run(["osascript", "-e", script])
+        def after_permission(granted):
+            if not granted:
+                logger.warning("User did not grant notification permissions")
+                script = 'display dialog "FolderChecker cannot show notifications. Please enable notifications in System Settings > Notifications." buttons {"OK"} default button "OK"'
+                subprocess.run(["osascript", "-e", script])
+            else:
+                logger.info("Notifications are allowed")
+
+        setup_notifications(after_permission)
 
         cfg = config.load_config()
 

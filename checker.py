@@ -8,6 +8,7 @@ from notifications import send_notification
 
 logger.info("Checker started")
 
+
 EXCLUDED_PATTERNS = {
     ".DS_Store",
     ".localized",

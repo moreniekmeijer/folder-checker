@@ -1,6 +1,7 @@
 import json
 import os
 
+
 CONFIG_FILE = os.path.expanduser("~/Library/Application Support/FolderChecker/config.json")
 os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
 
@@ -13,13 +14,16 @@ DEFAULTS = {
     "FIRST_RUN_DONE": False
 }
 
+
 def load_config():
     if not os.path.exists(CONFIG_FILE):
         return DEFAULTS.copy()
     with open(CONFIG_FILE, "r") as f:
         return json.load(f)
 
-def save_config(config):
-    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+
+def save_config(updates):
+    cfg = load_config()
+    cfg.update(updates)
     with open(CONFIG_FILE, "w") as f:
-        json.dump(config, f, indent=4)
+        json.dump(cfg, f, indent=4)
