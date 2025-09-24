@@ -6,6 +6,23 @@ DIST_DIR="dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 ZIP_FILE="$DIST_DIR/$APP_NAME.zip"
 
+echo "Preparing environment..."
+
+if [ -d ".venv" ]; then
+  echo "Activating virtual environment (.venv)..."
+  source .venv/bin/activate
+elif [ -d "venv" ]; then
+  echo "Activating virtual environment (venv)..."
+  source venv/bin/activate
+else
+  echo "No virtual environment found, using system Python."
+fi
+
+if [ -f "requirements.txt" ]; then
+  echo "Installing dependencies from requirements.txt..."
+  pip install -r requirements.txt
+fi
+
 echo "Building $APP_NAME..."
 
 rm -rf build "$DIST_DIR"
