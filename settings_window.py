@@ -99,10 +99,12 @@ class SettingsWindowController:
         y -= 60
         # Max size
         self.size_field = self._make_labeled_field(content, "Max Size (MB):", (20, y), self.cfg.get("MAX_SIZE_MB", 500))
+        self.size_field.setToolTip_("Maximum allowed folder size in MB.")
 
         y -= 40
         # Max items
         self.files_field = self._make_labeled_field(content, "Max Items:", (20, y), self.cfg.get("MAX_AMOUNT_ITEMS", 10))
+        self.files_field.setToolTip_("Maximum number of items allowed in the folder.")
 
         y -= 40
         # Interval
@@ -120,6 +122,7 @@ class SettingsWindowController:
                 self.interval_dropdown.selectItemWithTitle_(label)
                 break
         content.addSubview_(self.interval_dropdown)
+        self.interval_dropdown.setToolTip_("How often the checker should run.")
 
         y -= 60
         # Check now button
