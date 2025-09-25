@@ -9,12 +9,30 @@ from notifications import send_notification
 logger.info("Checker started")
 
 
-EXCLUDED_PATTERNS = {
+EXCLUDED_FOLDERS = {
     ".DS_Store",
     ".localized",
     ".Spotlight-V100",
     ".fseventsd",
     ".Trash",
+}
+
+ALLOWED_ICON_EXTS = {
+    ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".tif", ".tiff", ".bmp", ".heic", ".svg", ".icns"
+}
+
+EXTENSION_MAP = {
+    "mp3": {".mp3"},
+    "wav": {".wav"},
+    "aiff": {".aiff", ".aif"},
+    "mp4": {".mp4"},
+    "mov": {".mov"},
+    "zip": {".zip"},
+    "dmg": {".dmg"},
+    "doc": {".doc", ".odt", ".docx" ".ppt", ".pptx", ".xls", ".xlsx"},
+    "txt": {".txt", ".text", ".md", ".markdown", ".csv", ".log", ".json", ".xml", ".yaml", ".yml"},
+    "rtf": {".rtf"},
+    "app": {".app"},
 }
 
 
@@ -23,7 +41,7 @@ def get_top_level_items(path):
     return [
         os.path.join(path, f)
         for f in os.listdir(path)
-        if f not in EXCLUDED_PATTERNS
+        if f not in EXCLUDED_FOLDERS
     ]
 
 
@@ -46,6 +64,41 @@ def get_folder_size(path):
     return total_bytes, len(items), total_files
 
 
+def load_icons():
+    bundle = NSBundle.mainBundle()
+    return {
+        "doc": bundle.pathForResource_ofType_("doc", "icns"),
+        "rtf": bundle.pathForResource_ofType_("rtf", "icns"),
+        "txt": bundle.pathForResource_ofType_("txt", "icns"),
+        "mp3": bundle.pathForResource_ofType_("mp3", "icns"),
+        "wav": bundle.pathForResource_ofType_("wav", "icns"),
+        "aiff": bundle.pathForResource_ofType_("aiff", "icns"),
+        "mp4": bundle.pathForResource_ofType_("mp4", "icns"),
+        "mov": bundle.pathForResource_ofType_("mov", "icns"),
+        "zip": bundle.pathForResource_ofType_("zip", "icns"),
+        "dmg": bundle.pathForResource_ofType_("dmg", "icns"),
+        "app": bundle.pathForResource_ofType_("app", "icns"),
+        "folder": bundle.pathForResource_ofType_("folder", "icns"),
+        "fallback": bundle.pathForResource_ofType_("sweeper", "icns"),
+    }
+
+
+def get_icon_for_item(item_path, icons):
+    if os.path.isdir(item_path):
+        return icons["folder"] or icons["fallback"]
+
+    ext = os.path.splitext(item_path)[1].lower()
+
+    if ext in ALLOWED_ICON_EXTS:
+        return item_path
+
+    for category, exts in EXTENSION_MAP.items():
+        if ext in exts:
+            return icons[category] or icons["fallback"]
+
+    return icons["fallback"]
+
+
 def move_to_trash(path):
     logger.info(f"Moving to Trash: {path}")
     script = f'tell application "Finder" to move (POSIX file "{path}") to trash'
@@ -53,9 +106,7 @@ def move_to_trash(path):
 
 
 def delete_files_interactive(path, max_items=10):
-    bundle = NSBundle.mainBundle()
-    icon_path = bundle.pathForResource_ofType_("sweeper", "icns")
-
+    icons = load_icons()
     items = get_top_level_items(path)
     items.sort(key=os.path.getmtime, reverse=True)
 
@@ -66,23 +117,39 @@ def delete_files_interactive(path, max_items=10):
             continue
 
         name = os.path.basename(item_path)
-        if icon_path:
-            script = f'display dialog "Do you want to remove this item?\n\n{name}" with icon POSIX file "{icon_path}" buttons {{"No","Yes","Skip All"}} default button "No"'
-        else:
-            script = f'display dialog "Do you want to remove this item?\n\n{name}" buttons {{"No","Yes","Skip All"}} default button "No"'
-        result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+        name_escaped = name.replace('"', '\\"')
+        icon_path = get_icon_for_item(item_path, icons)
 
-        if "Yes" in result.stdout:
+        if icon_path and os.path.exists(icon_path):
+            icon_arg = f' with icon POSIX file "{icon_path}"'
+        else:
+            icon_arg = ""
+
+        script = (
+            f'display dialog "Do you want to remove this item?\\n\\n{name_escaped}"'
+            f'{icon_arg} buttons {{"No","Yes","Skip All"}} default button "No"'
+        )
+
+        result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+        stdout = (result.stdout or "").strip()
+
+        choice = None
+        if stdout.startswith("button returned:"):
+            choice = stdout.split(":", 1)[1].strip()
+
+        if choice == "Yes":
             try:
                 move_to_trash(item_path)
                 logger.info(f"{item_path} moved to Trash.")
             except Exception as e:
                 logger.error(f"Error moving {item_path} to Trash: {e}")
-        elif "Skip All" in result.stdout:
+        elif choice == "Skip All":
             skip_all = True
             logger.info("User chose Skip All — remaining items will be kept.")
         else:
             logger.debug(f"{item_path} kept.")
+
+        time.sleep(0.05)
 
 
 def run_checker(interactive=False):

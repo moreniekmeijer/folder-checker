@@ -8,6 +8,18 @@ DATA_FILES = [
     'resources/sweeper_disabled.icns',
     'resources/sweeper_enabled.icns',
     'resources/sweeper_dark.icns',
+    'resources/folder.icns',
+    'resources/doc.icns',
+    'resources/rtf.icns',
+    'resources/txt.icns',
+    'resources/mp3.icns',
+    'resources/wav.icns',
+    'resources/aiff.icns',
+    'resources/zip.icns',
+    'resources/dmg.icns',
+    'resources/mp4.icns',
+    'resources/mov.icns',
+    'resources/app.icns',
 ]
 OPTIONS = {
     'argv_emulation': False,
