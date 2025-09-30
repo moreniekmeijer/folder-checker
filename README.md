@@ -43,7 +43,7 @@ With FolderChecker you can:
 
 ## Installation
 
-1. Download the latest release from the [GitHub releases page](https://github.com/).
+1. Download the latest release from the [releases page](https://github.com/moreniekmeijer/folder-checker/releases).
 2. Unzip the `.zip` file.
 3. Drag `FolderChecker.app` into your **Applications** folder.
 4. Launch the app via Launchpad or Spotlight. The icon will appear in your menubar.
