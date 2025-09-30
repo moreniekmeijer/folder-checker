@@ -7,7 +7,6 @@ DATA_FILES = [
     'resources/enabled.icns',
     'resources/sweeper_disabled.icns',
     'resources/sweeper_enabled.icns',
-    'resources/sweeper_dark.icns',
     'resources/folder.icns',
     'resources/doc.icns',
     'resources/rtf.icns',
