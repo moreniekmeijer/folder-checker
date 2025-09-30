@@ -1,7 +1,7 @@
 from setuptools import setup
 
 
-APP = ['menubar_app.py']
+APP = ['src/menubar_app.py']
 DATA_FILES = [
     'resources/disabled.icns',
     'resources/enabled.icns',
@@ -39,5 +39,4 @@ setup(
     app=APP,
     options={'py2app': OPTIONS},
     install_requires=['pyobjc'],
-    py_modules=['checker', 'config', 'settings_window', 'logger_setup'],
 )
