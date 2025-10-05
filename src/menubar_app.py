@@ -1,6 +1,7 @@
 import os
 import subprocess
 import threading
+import time
 from Foundation import NSObject
 from AppKit import (
     NSApplication,
@@ -9,6 +10,7 @@ from AppKit import (
     NSMenuItem,
     NSImage,
     NSBundle,
+    NSWorkspace,
 )
 import checker
 import config
@@ -42,7 +44,6 @@ class AppDelegate(NSObject):
     def applicationDidFinishLaunching_(self, notification):
         logger.info("Application launched")
 
-        # --- Setup notificaties ---
         def after_permission(granted):
             if not granted:
                 logger.warning("User did not grant notification permissions")
@@ -54,6 +55,19 @@ class AppDelegate(NSObject):
         setup_notifications(after_permission)
 
         cfg = config.load_config()
+        if "LAST_RUN_TS" not in cfg:
+            cfg["LAST_RUN_TS"] = 0
+            config.save_config(cfg)
+
+        self._catch_up_check()
+
+        nc = NSWorkspace.sharedWorkspace().notificationCenter()
+        nc.addObserver_selector_name_object_(
+            self,
+            self.handleWake_,
+            "NSWorkspaceDidWakeNotification",
+            None
+        )
 
         if not cfg.get("FIRST_RUN_DONE", False):
             try:
@@ -74,6 +88,12 @@ class AppDelegate(NSObject):
             settings.open_settings_window()
             cfg["FIRST_RUN_DONE"] = True
             config.save_config(cfg)
+    
+    def applicationWillTerminate_(self, notification):
+        nc = NSWorkspace.sharedWorkspace().notificationCenter()
+        nc.removeObserver_(self)
+        logger.info("Application terminating — removed wake observer")
+
 
     # -----------------------
     # UI helpers
@@ -140,6 +160,39 @@ class AppDelegate(NSObject):
 
         self.statusitem.setMenu_(menu)
 
+
+    # -----------------------
+    # Catch-up logica
+    # -----------------------
+    def _catch_up_check(self):
+        cfg = config.load_config()
+
+        if not cfg.get("FIRST_RUN_DONE", False):
+            logger.info("Skipping catch-up check — first run not completed yet")
+            return
+
+        interval = cfg.get("CHECK_INTERVAL_SEC", 3600)
+        last_run = cfg.get("LAST_RUN_TS", 0)
+        now = time.time()
+
+        if now - last_run >= interval:
+            logger.info("Catch-up check triggered after sleep/launch")
+            try:
+                checker.run_checker()
+                cfg["LAST_RUN_TS"] = now
+                config.save_config(cfg)
+            except Exception as e:
+                logger.error(f"Error during catch-up check: {e}")
+
+
+    # -----------------------
+    # Wake handler
+    # -----------------------
+    def handleWake_(self, notification):
+        logger.info("Mac woke from sleep — checking if catch-up is needed")
+        self._catch_up_check()
+
+
     # -----------------------
     # Checker loop
     # -----------------------
@@ -155,6 +208,8 @@ class AppDelegate(NSObject):
             logger.info(f"Background checker triggered (next run in {interval} sec)")
             try:
                 checker.run_checker()
+                cfg["LAST_RUN_TS"] = time.time()
+                config.save_config(cfg)
             except Exception as e:
                 logger.error(f"Error during periodical check: {e}")
 
@@ -169,6 +224,7 @@ class AppDelegate(NSObject):
             self.checker_timer.cancel()
             self.checker_timer = None
             logger.info("Background checker stopped")
+
 
     # -----------------------
     # Menu actions
