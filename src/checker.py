@@ -29,7 +29,7 @@ EXTENSION_MAP = {
     "mov": {".mov"},
     "zip": {".zip"},
     "dmg": {".dmg"},
-    "doc": {".doc", ".odt", ".docx" ".ppt", ".pptx", ".xls", ".xlsx"},
+    "doc": {".doc", ".odt", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"},
     "txt": {".txt", ".text", ".md", ".markdown", ".csv", ".log", ".json", ".xml", ".yaml", ".yml"},
     "rtf": {".rtf"},
     "app": {".app"},
@@ -134,8 +134,8 @@ def delete_files_interactive(path, max_items=10):
         stdout = (result.stdout or "").strip()
 
         choice = None
-        if stdout.startswith("button returned:"):
-            choice = stdout.split(":", 1)[1].strip()
+        if "button returned" in stdout:
+            choice = stdout.split(":")[-1].strip()
 
         if choice == "Yes":
             try:

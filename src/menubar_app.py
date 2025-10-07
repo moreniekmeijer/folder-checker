@@ -232,7 +232,10 @@ class AppDelegate(NSObject):
     def checkNow_(self, sender):
         logger.info("Manual 'Check now' clicked")
         try:
-            checker.run_checker()
+            checker.run_checker(interactive=True)
+            cfg = config.load_config()
+            cfg["LAST_RUN_TS"] = time.time()
+            config.save_config(cfg)
         except Exception as e:
             logger.error(f"Error during manual check: {e}")
 
