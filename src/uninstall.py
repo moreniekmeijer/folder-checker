@@ -1,8 +1,9 @@
 import os
 import shutil
 import subprocess
-import AppKit
 from logger_setup import logger
+from dialogs import show_dialog
+from AppKit import NSBundle, NSApp
 
 
 def remove_from_login_items(app_path):
@@ -25,58 +26,38 @@ def remove_from_login_items(app_path):
 
 
 def uninstall_app():
-    alert = AppKit.NSAlert.alloc().init()
-    alert.setMessageText_("Uninstall Folder Checker?")
-    alert.setInformativeText_("This will remove all app data from the user and quit the app.")
-    alert.addButtonWithTitle_("Uninstall")
-    alert.addButtonWithTitle_("Cancel")
-    alert.setAlertStyle_(AppKit.NSAlertStyleWarning)
+    choice = show_dialog(
+        "Uninstall Folder Checker?\n\nThis will remove all app data and quit the app.",
+        icon_name="sweeper",
+        buttons=("Cancel", "Uninstall"),
+        default_button="Cancel",
+        timeout=60,
+    )
 
-    # --- custom icon ---
-    bundle = AppKit.NSBundle.mainBundle()
-    icon_path = bundle.pathForResource_ofType_("sweeper", "icns")
-    if icon_path:
-        img = AppKit.NSImage.alloc().initWithContentsOfFile_(icon_path)
-        if img:
-            img.setSize_((32, 32))
-            img.setTemplate_(True)
-            alert.setIcon_(img)
+    if choice != "Uninstall":
+        logger.info("Uninstall cancelled by user.")
+        return
 
-    response = alert.runModal()
-    if response == AppKit.NSAlertFirstButtonReturn:
-        app_support = os.path.expanduser("~/Library/Application Support/FolderChecker")
-        if os.path.exists(app_support):
+    app_support = os.path.expanduser("~/Library/Application Support/FolderChecker")
+    log_dir = os.path.expanduser("~/Library/Logs/FolderChecker")
+    bundle = NSBundle.mainBundle()
+    app_bundle_path = bundle.bundlePath()
+
+    for path in (app_support, log_dir):
+        if os.path.exists(path):
             try:
-                shutil.rmtree(app_support)
-                logger.info(f"Removed {app_support}")
+                shutil.rmtree(path)
+                logger.info(f"Removed {path}")
             except Exception as e:
-                logger.error(f"Error removing support folder: {e}")
+                logger.error(f"Error removing {path}: {e}")
 
-        app_bundle_path = bundle.bundlePath()
-        remove_from_login_items(app_bundle_path)
+    remove_from_login_items(app_bundle_path)
 
-        if os.path.exists(app_bundle_path):
-            try:
-                shutil.rmtree(app_bundle_path)
-                logger.info(f"Removed {app_bundle_path}")
-            except Exception as e:
-                logger.error(f"Error removing app bundle: {e}")
+    if os.path.exists(app_bundle_path):
+        try:
+            shutil.rmtree(app_bundle_path)
+            logger.info(f"Removed app bundle: {app_bundle_path}")
+        except Exception as e:
+            logger.error(f"Error removing app bundle: {e}")
 
-        log_dir = os.path.expanduser("~/Library/Logs/FolderChecker")
-        
-        if os.path.exists(log_dir):
-            try:
-                shutil.rmtree(log_dir)
-                logger.info(f"Removed log directory {log_dir}")
-            except Exception as e:
-                logger.error(f"Error removing log directory: {e}")
-
-        success = AppKit.NSAlert.alloc().init()
-        success.setMessageText_("FolderChecker was successfully uninstalled.")
-        success.addButtonWithTitle_("OK")
-        system_icon = AppKit.NSImage.imageNamed_("NSApplicationIcon")
-        success.setIcon_(system_icon)   
-        success.runModal()
-
-        AppKit.NSApp.terminate_(None)
-        
+    NSApp.terminate_(None)

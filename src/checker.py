@@ -118,7 +118,7 @@ def delete_files_interactive(path, max_items=10):
 
         choice = show_dialog(
             f"Do you want to remove this item?\n\n{name}",
-            icon_name=None if not icon_path else os.path.splitext(os.path.basename(icon_path))[0],
+            icon_name=icon_path,
             buttons=("No", "Yes", "Skip All"),
             default_button="No",
             timeout=60,

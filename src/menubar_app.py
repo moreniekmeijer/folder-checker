@@ -132,7 +132,7 @@ class AppDelegate(NSObject):
         self.toggle_checker_item = NSMenuItem.alloc().initWithTitle_action_keyEquivalent_(
             "Disable checker", "toggleChecker:", ""
         )
-        self.toggle_checker_item.setImage_(self.icon_enabled)
+        self.toggle_checker_item.setImage_(self.icon_disabled)
         menu.addItem_(self.toggle_checker_item)
 
         menu.addItem_(NSMenuItem.separatorItem())
