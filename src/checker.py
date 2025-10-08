@@ -1,10 +1,10 @@
 import os
-import subprocess
 import time
 import config
 from logger_setup import logger
-from AppKit import NSBundle
+from dialogs import show_dialog, move_to_trash
 from notifications import send_notification
+from AppKit import NSBundle
 
 logger.info("Checker started")
 
@@ -65,6 +65,7 @@ def get_folder_size(path):
 
 
 def load_icons():
+    """Load app icon paths for various file types."""
     bundle = NSBundle.mainBundle()
     return {
         "doc": bundle.pathForResource_ofType_("doc", "icns"),
@@ -84,8 +85,9 @@ def load_icons():
 
 
 def get_icon_for_item(item_path, icons):
+    """Return icon path for a given file or folder."""
     if os.path.isdir(item_path):
-        return icons["folder"] or icons["fallback"]
+        return icons.get("folder") or icons.get("fallback")
 
     ext = os.path.splitext(item_path)[1].lower()
 
@@ -94,18 +96,13 @@ def get_icon_for_item(item_path, icons):
 
     for category, exts in EXTENSION_MAP.items():
         if ext in exts:
-            return icons[category] or icons["fallback"]
+            return icons.get(category) or icons.get("fallback")
 
-    return icons["fallback"]
-
-
-def move_to_trash(path):
-    logger.info(f"Moving to Trash: {path}")
-    script = f'tell application "Finder" to move (POSIX file "{path}") to trash'
-    subprocess.run(["osascript", "-e", script])
+    return icons.get("fallback")
 
 
 def delete_files_interactive(path, max_items=10):
+    """Ask user interactively which items to delete."""
     icons = load_icons()
     items = get_top_level_items(path)
     items.sort(key=os.path.getmtime, reverse=True)
@@ -117,25 +114,15 @@ def delete_files_interactive(path, max_items=10):
             continue
 
         name = os.path.basename(item_path)
-        name_escaped = name.replace('"', '\\"')
         icon_path = get_icon_for_item(item_path, icons)
 
-        if icon_path and os.path.exists(icon_path):
-            icon_arg = f' with icon POSIX file "{icon_path}"'
-        else:
-            icon_arg = ""
-
-        script = (
-            f'display dialog "Do you want to remove this item?\\n\\n{name_escaped}"'
-            f'{icon_arg} buttons {{"No","Yes","Skip All"}} default button "No"'
+        choice = show_dialog(
+            f"Do you want to remove this item?\n\n{name}",
+            icon_name=None if not icon_path else os.path.splitext(os.path.basename(icon_path))[0],
+            buttons=("No", "Yes", "Skip All"),
+            default_button="No",
+            timeout=60,
         )
-
-        result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
-        stdout = (result.stdout or "").strip()
-
-        choice = None
-        if "button returned" in stdout:
-            choice = stdout.split(":")[-1].strip()
 
         if choice == "Yes":
             try:
@@ -153,6 +140,7 @@ def delete_files_interactive(path, max_items=10):
 
 
 def run_checker(interactive=False):
+    """Main cleanup logic: check folder sizes and optionally run cleanup."""
     cfg = config.load_config()
 
     if not cfg.get("FIRST_RUN_DONE", False):
@@ -164,19 +152,18 @@ def run_checker(interactive=False):
     max_amount_items = cfg["MAX_AMOUNT_ITEMS"]
     max_interactive_files = cfg["MAX_INTERACTIVE_FILES"]
 
-    bundle = NSBundle.mainBundle()
-    icon_disabled_path = bundle.pathForResource_ofType_("sweeper_disabled", "icns")
-    icon_enabled_path = bundle.pathForResource_ofType_("sweeper_enabled", "icns")
+    icon_disabled = "sweeper_disabled"
+    icon_enabled = "sweeper_enabled"
 
     if not watch_paths:
         logger.warning("No folders selected")
-
-        msg = "No folders selected.\n\nPlease add at least one folder in the settings."
-        if icon_disabled_path:
-            script = f'display dialog "{msg}" with icon POSIX file "{icon_disabled_path}" buttons {{"OK"}} default button "OK"'
-        else:
-            script = f'display dialog "{msg}" buttons {{"OK"}} default button "OK"'
-        subprocess.run(["osascript", "-e", script])
+        show_dialog(
+            "No folders selected.\n\nPlease add at least one folder in the settings.",
+            icon_name=icon_disabled,
+            buttons=("OK",),
+            default_button="OK",
+            timeout=30,
+        )
         return
 
     for path in watch_paths:
@@ -185,35 +172,47 @@ def run_checker(interactive=False):
         if os.path.isdir(expanded_path):
             size_bytes, top_level_items, total_files = get_folder_size(expanded_path)
             size_mb = size_bytes / (1024 * 1024)
-
             logger.info(f"Checking {expanded_path} → {top_level_items} items, {size_mb:.2f} MB")
 
             if size_mb > max_size_mb or top_level_items > max_amount_items:
                 logger.warning(f"Folder exceeds limits: {expanded_path}")
 
-                summary = f"{expanded_path} contains {top_level_items} items ({size_mb:.2f} MB).\n\nDo you want to cleanup now?"
-                if icon_disabled_path:
-                    script = f'display dialog "{summary}" with icon POSIX file "{icon_disabled_path}" buttons {{"Remind me later","Clean now"}} default button "Remind me later"'
-                else:
-                    script = f'display dialog "{summary}" buttons {{"Remind me later","Clean now"}} default button "Remind me later"'
-                result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+                summary = (
+                    f"{expanded_path} contains {top_level_items} items ({size_mb:.2f} MB).\n\n"
+                    "Do you want to clean up now?"
+                )
+                choice = show_dialog(
+                    summary,
+                    icon_name=icon_disabled,
+                    buttons=("Remind me later", "Clean now"),
+                    default_button="Remind me later",
+                    timeout=60,
+                )
 
-                if "Clean now" in result.stdout:
+                if choice == "Clean now":
                     logger.info("User chose Clean now")
                     delete_files_interactive(expanded_path, max_interactive_files)
                 else:
                     logger.info("User chose Remind me later")
+
             else:
                 logger.info(f"{expanded_path} is within limits")
                 summary = f"It contains {top_level_items} items ({size_mb:.2f} MB)."
+
                 if interactive:
-                    if icon_enabled_path:
-                        script = f'display dialog "{expanded_path} is within limits.\n\n{summary}" with icon POSIX file "{icon_enabled_path}" buttons {{"OK"}} default button "OK"'
-                    else:
-                        script = f'display dialog "{expanded_path} is within limits.\n\n{summary}" buttons {{"OK"}} default button "OK"'
-                    subprocess.run(["osascript", "-e", script])
+                    show_dialog(
+                        f"{expanded_path} is within limits.\n\n{summary}",
+                        icon_name=icon_enabled,
+                        buttons=("OK",),
+                        default_button="OK",
+                        timeout=30,
+                    )
                 else:
-                    send_notification(expanded_path, f"Folder is within limits.\n{summary}")
+                    send_notification(
+                        expanded_path,
+                        f"Folder is within limits.\n{summary}",
+                    )
+
         else:
             logger.error(f"Cannot find folder: {expanded_path}")
 
